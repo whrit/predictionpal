@@ -747,19 +747,22 @@ def fine_tune_model():
                     break
 
 
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.route('/get_data', methods=['GET'])
 def predict_future_data():
     print("Utilizing the model for predicting future data...")
     import os
-
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-
     import pandas as pd
     import numpy as np
     from sklearn.preprocessing import MinMaxScaler
     from tensorflow.keras.models import load_model
-    import matplotlib.pyplot as plt
-    import matplotlib.dates as mdates
 
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
+    # Assuming cpugpu() is a function in your original code
     cpugpu()
 
     # Load data
@@ -851,38 +854,28 @@ def predict_future_data():
 
     print(predictions)
 
-    # Find the rows with the lowest and highest predicted close and the highest and lowest % change
+    # Find the rows with the lowest and highest predicted close
     min_close_row = predictions.iloc[predictions["Predicted Close"].idxmin()]
     max_close_row = predictions.iloc[predictions["Predicted Close"].idxmax()]
 
-    # Print the rows with the lowest and highest predicted close and the highest and lowest % change
+    # Print the rows with the lowest and highest predicted close
     print(f"Highest predicted close:\n{max_close_row}\n")
     print(f"Lowest predicted close:\n{min_close_row}\n")
 
-    # Combine Date and Close Data for actual data
-    actual_dates = mdates.date2num(pd.to_datetime(data["Date"].values))
-    actual_close_prices = data["Close"].values
+    # Return the data as JSON
+    return jsonify({
+        'actual_data': {
+            'dates': data["Date"].tolist(),
+            'values': data["Close"].tolist()
+        },
+        'predicted_data': {
+            'dates': predictions["Date"].tolist(),
+            'values': predictions["Predicted Close"].tolist()
+        }
+    })
 
-    predicted_dates = mdates.date2num(predictions["Date"].values)
-    predicted_close_prices = predictions["Predicted Close"].values
-
-    # Plot historical data and predictions
-    plt.figure(figsize=(14, 7))  # Adjust the figure size for better visualization
-    plt.plot(actual_dates, actual_close_prices, label="Actual Data")
-    plt.plot(predicted_dates, predicted_close_prices, label="Predicted Data")
-
-    # Formatting the x-axis to display dates clearly
-    ax = plt.gca()  # Get the current axis
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Format x-axis
-    plt.xticks(rotation=45)
-    plt.xlabel('Date')
-    plt.ylabel('Close Price')
-    plt.legend()
-    plt.title("Predicted Close Prices")
-
-    # Show plot
-    plt.tight_layout()
-    plt.show()
+if __name__ == '__main__':
+    app.run(debug=True)
 
 def compare_predictions():
     print("Comparing the predictions with the actual data...")
